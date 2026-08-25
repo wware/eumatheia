@@ -1,3 +1,21 @@
+# Stage 1: Build the React frontend
+FROM node:20-slim AS frontend-builder
+
+WORKDIR /frontend
+
+# Copy frontend package files
+COPY frontend/package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy frontend source
+COPY frontend/ ./
+
+# Build the React app
+RUN npm run build
+
+# Stage 2: Python runtime with built frontend
 FROM python:3.13-slim
 
 WORKDIR /app
@@ -10,7 +28,9 @@ COPY pyproject.toml .
 COPY src/ src/
 COPY exhibits/ exhibits/
 COPY narratives/ narratives/
-COPY static/ static/
+
+# Copy built frontend from stage 1
+COPY --from=frontend-builder /frontend/dist /app/frontend/dist
 
 # Install dependencies
 RUN uv pip install --system -e .

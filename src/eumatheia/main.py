@@ -58,16 +58,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Mount static files
-static_path = Path(__file__).parent.parent.parent / "static"
-app.mount("/static", StaticFiles(directory=static_path), name="static")
+# Mount static files - serve the built React frontend
+frontend_dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
+app.mount("/assets", StaticFiles(directory=frontend_dist / "assets"), name="assets")
 
 
 @app.get("/")
 async def root():
     """Serve the frontend."""
     from fastapi.responses import FileResponse
-    return FileResponse(static_path / "index.html")
+    return FileResponse(frontend_dist / "index.html")
 
 
 @app.post("/api/sessions")

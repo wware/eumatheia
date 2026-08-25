@@ -12,7 +12,7 @@ services:
       - ./src:/app/src
       - ./exhibits:/app/exhibits
       - ./narratives:/app/narratives
-      - ./static:/app/static
+      - ./frontend/dist:/app/frontend/dist
     environment:
       - PYTHONUNBUFFERED=1
     depends_on:

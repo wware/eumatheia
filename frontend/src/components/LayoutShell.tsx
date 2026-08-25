@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import './LayoutShell.css'
 
 interface LayoutShellProps {
