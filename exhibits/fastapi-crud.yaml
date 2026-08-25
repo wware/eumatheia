@@ -1,0 +1,36 @@
+exhibit: fastapi-crud
+title: "Build a FastAPI CRUD App"
+setup: []
+steps:
+  - id: intro
+    narrative: narratives/fastapi-intro.md
+    panes:
+      - type: terminal
+        label: "Shell"
+    verify:
+      type: manual
+    next: run-app
+
+  - id: run-app
+    narrative: narratives/fastapi-run.md
+    panes:
+      - type: terminal
+        label: "Shell"
+      - type: iframe
+        label: "App"
+        path: "http://localhost:9000"
+    verify:
+      type: manual
+    next: api-docs
+
+  - id: api-docs
+    narrative: narratives/fastapi-api.md
+    panes:
+      - type: terminal
+        label: "Shell"
+      - type: iframe
+        label: "App"
+        path: "http://localhost:9000"
+    verify:
+      type: manual
+    next: null

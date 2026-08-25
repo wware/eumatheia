@@ -1,0 +1,21 @@
+exhibit: demo
+title: "Getting Started with Eumatheia"
+setup: []  # No Kubernetes manifests for this simple demo
+steps:
+  - id: hello-world
+    narrative: narratives/hello-world.md
+    panes:
+      - type: terminal
+        label: "Shell"
+    verify:
+      type: manual
+    next: try-vim
+
+  - id: try-vim
+    narrative: narratives/try-vim.md
+    panes:
+      - type: terminal
+        label: "Shell"
+    verify:
+      type: manual
+    next: null

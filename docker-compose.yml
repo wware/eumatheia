@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile.orchestrator
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount source for hot reload during development
+      - ./src:/app/src
+      - ./exhibits:/app/exhibits
+      - ./narratives:/app/narratives
+      - ./static:/app/static
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - example-app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  example-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.example-app
+    ports:
+      - "9000:8080"
+      - "7681:7681"
+    volumes:
+      # Mount for live reload during development
+      - ./example-app:/app

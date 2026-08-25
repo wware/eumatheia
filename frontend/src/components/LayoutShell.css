@@ -1,0 +1,92 @@
+.layout-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.layout-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.layout-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.position-toggle {
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+}
+
+.position-toggle:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.layout-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Side layout: narrative on left, content on right */
+.layout-side {
+  flex-direction: row;
+}
+
+.layout-side .narrative-pane {
+  width: 400px;
+  min-width: 300px;
+  max-width: 600px;
+  resize: horizontal;
+  overflow: auto;
+  border-right: 2px solid #e5e7eb;
+}
+
+.layout-side .tabbed-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Top layout: narrative on top, content on bottom */
+.layout-top {
+  flex-direction: column;
+}
+
+.layout-top .narrative-pane {
+  height: 300px;
+  min-height: 200px;
+  max-height: 500px;
+  resize: vertical;
+  overflow: auto;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.layout-top .tabbed-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.narrative-pane {
+  background: #f9fafb;
+  padding: 2rem;
+}
+
+.tabbed-content {
+  background: white;
+  display: flex;
+  flex-direction: column;
+}

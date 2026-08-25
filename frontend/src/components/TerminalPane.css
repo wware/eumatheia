@@ -1,0 +1,11 @@
+.terminal-pane {
+  width: 100%;
+  height: 100%;
+  background: #1a1a1a;
+}
+
+.terminal-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}

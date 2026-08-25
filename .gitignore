@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv
+
+# Node / Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+.pnpm-debug.log*
+.yarn/
+.npm/
+frontend/dist/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Core dumps
+core.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Docker
+.dockerignore
+
+# OS
+.DS_Store
+Thumbs.db

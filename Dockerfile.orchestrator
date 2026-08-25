@@ -1,0 +1,20 @@
+FROM python:3.13-slim
+
+WORKDIR /app
+
+# Install uv for fast dependency management
+RUN pip install uv
+
+# Copy project files
+COPY pyproject.toml .
+COPY src/ src/
+COPY exhibits/ exhibits/
+COPY narratives/ narratives/
+COPY static/ static/
+
+# Install dependencies
+RUN uv pip install --system -e .
+
+EXPOSE 8000
+
+CMD ["uv", "run", "python", "-m", "uvicorn", "eumatheia.main:app", "--host", "0.0.0.0", "--port", "8000"]

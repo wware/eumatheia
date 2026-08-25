@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eumatheia - Interactive Learning Platform</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        header {
+            background: #16213e;
+            padding: 1rem 2rem;
+            border-bottom: 2px solid #0f3460;
+        }
+
+        h1 {
+            color: #e94560;
+            font-size: 1.8rem;
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: #16213e;
+            padding: 1.5rem;
+            border-right: 2px solid #0f3460;
+            overflow-y: auto;
+        }
+
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .narrative {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            background: #1a1a2e;
+        }
+
+        .narrative h1, .narrative h2 {
+            color: #e94560;
+            margin-bottom: 1rem;
+        }
+
+        .narrative p {
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .narrative pre {
+            background: #0f3460;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 1rem 0;
+            position: relative;
+        }
+
+        .narrative code {
+            font-family: 'Courier New', monospace;
+            color: #4ecca3;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .copy-btn:hover {
+            background: #d63447;
+        }
+
+        .terminal-pane {
+            height: 400px;
+            background: #000;
+            border-top: 2px solid #0f3460;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .btn {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-top: 1rem;
+        }
+
+        .btn:hover {
+            background: #d63447;
+        }
+
+        .btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .nav-btn {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 0.75rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            background: #d63447;
+        }
+
+        .nav-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .info-box {
+            background: #0f3460;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        .info-box h3 {
+            color: #4ecca3;
+            margin-bottom: 0.5rem;
+        }
+
+        .info-box p {
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #4ecca3;
+        }
+
+        .error {
+            background: #d63447;
+            color: white;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Eumatheia</h1>
+        <p>Interactive Software Engineering Learning Platform</p>
+    </header>
+
+    <div class="container">
+        <aside class="sidebar">
+            <div class="info-box">
+                <h3>Session Info</h3>
+                <p id="session-info">No session started</p>
+            </div>
+
+            <div class="info-box">
+                <h3>Current Step</h3>
+                <p id="step-info">-</p>
+            </div>
+
+            <button class="btn" id="start-demo-btn" onclick="startSession('demo')">Start Demo</button>
+            <button class="btn" id="start-fastapi-btn" onclick="startSession('fastapi-crud')">Start FastAPI Tutorial</button>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" id="prev-btn" onclick="previousStep()" disabled>
+                    ← Previous
+                </button>
+                <button class="nav-btn" id="next-btn" onclick="nextStep()" disabled>
+                    Next →
+                </button>
+            </div>
+        </aside>
+
+        <main class="content">
+            <div class="narrative" id="narrative">
+                <div class="loading">
+                    <h2>Welcome to Eumatheia</h2>
+                    <p>Click "Start Demo Exhibit" to begin your first tutorial.</p>
+                    <p style="margin-top: 2rem; color: #aaa;">This is a prototype of an interactive learning platform where you can follow tutorials with real terminals, live dashboards, and hands-on exercises.</p>
+                </div>
+            </div>
+
+            <div class="terminal-pane" id="terminal-pane" style="display: none;">
+                <iframe id="terminal" src="http://localhost:7681"></iframe>
+            </div>
+
+            <div class="terminal-pane" id="iframe-pane" style="display: none;">
+                <iframe id="app-iframe" src=""></iframe>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let currentSession = null;
+        let stepHistory = [];  // Track navigation history
+
+        async function startSession(exhibitId) {
+            try {
+                const response = await fetch(`/api/sessions?exhibit_id=${exhibitId}`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) throw new Error('Failed to create session');
+
+                currentSession = await response.json();
+                document.getElementById('session-info').textContent = currentSession.session_id;
+                document.getElementById('start-demo-btn').disabled = true;
+                document.getElementById('start-fastapi-btn').disabled = true;
+                stepHistory = [];  // Reset history for new session
+
+                await loadCurrentStep();
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        async function loadCurrentStep() {
+            if (!currentSession) return;
+
+            try {
+                const response = await fetch(`/api/sessions/${currentSession.session_id}/step`);
+                if (!response.ok) throw new Error('Failed to load step');
+
+                const data = await response.json();
+                displayStep(data);
+
+                document.getElementById('step-info').textContent = data.step.id;
+                document.getElementById('next-btn').disabled = !data.has_next;
+                document.getElementById('prev-btn').disabled = stepHistory.length === 0;
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        async function nextStep() {
+            if (!currentSession) return;
+
+            try {
+                // Save current step to history before advancing
+                stepHistory.push(currentSession.current_step);
+
+                const response = await fetch(`/api/sessions/${currentSession.session_id}/next`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) throw new Error('Failed to advance step');
+
+                await loadCurrentStep();
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        async function previousStep() {
+            if (!currentSession || stepHistory.length === 0) return;
+
+            try {
+                // Get the previous step from history
+                const previousStepId = stepHistory.pop();
+
+                // Navigate back by setting the step directly
+                const response = await fetch(`/api/sessions/${currentSession.session_id}/step`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ step_id: previousStepId })
+                });
+
+                if (!response.ok) throw new Error('Failed to go back');
+
+                await loadCurrentStep();
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function displayStep(data) {
+            const narrative = document.getElementById('narrative');
+
+            // Parse markdown with better code block handling
+            let html = data.narrative_content;
+
+            // Replace code blocks first (preserve them)
+            const codeBlocks = [];
+            html = html.replace(/```bash\n([\s\S]*?)```/g, (match, code) => {
+                const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
+                codeBlocks.push(code.trim());
+                return placeholder;
+            });
+
+            // Replace other markdown
+            html = html
+                .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+                .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+                .split('\n\n')
+                .map(para => {
+                    if (para.startsWith('<h1>') || para.startsWith('<h2>') || para.includes('__CODE_BLOCK_')) {
+                        return para;
+                    }
+                    return `<p>${para}</p>`;
+                })
+                .join('');
+
+            // Restore code blocks with copy buttons
+            codeBlocks.forEach((code, i) => {
+                const codeHtml = `<pre><code>${escapeHtml(code)}</code><button class="copy-btn">Copy</button></pre>`;
+                html = html.replace(`__CODE_BLOCK_${i}__`, codeHtml);
+            });
+
+            narrative.innerHTML = html;
+
+            // Add click handlers to copy buttons with original code
+            const buttons = narrative.querySelectorAll('.copy-btn');
+            buttons.forEach((btn, i) => {
+                const code = codeBlocks[i];
+                btn.addEventListener('click', function() {
+                    navigator.clipboard.writeText(code);
+
+                    const originalText = this.textContent;
+                    this.textContent = 'Copied!';
+                    setTimeout(() => {
+                        this.textContent = originalText;
+                    }, 2000);
+                });
+            });
+
+            // Handle panes based on step configuration
+            const terminalPane = document.getElementById('terminal-pane');
+            const iframePane = document.getElementById('iframe-pane');
+            const appIframe = document.getElementById('app-iframe');
+
+            // Hide all panes first
+            terminalPane.style.display = 'none';
+            iframePane.style.display = 'none';
+
+            // Show panes based on step config
+            data.step.panes.forEach(pane => {
+                if (pane.type === 'terminal') {
+                    terminalPane.style.display = 'block';
+                } else if (pane.type === 'iframe' && pane.path) {
+                    iframePane.style.display = 'block';
+                    appIframe.src = pane.path;
+                }
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showError(message) {
+            const narrative = document.getElementById('narrative');
+            narrative.innerHTML = `<div class="error">Error: ${message}</div>`;
+        }
+    </script>
+</body>
+</html>

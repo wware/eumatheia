@@ -1,0 +1,46 @@
+.tab-bar {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.5rem 1rem;
+  background: #f3f4f6;
+  border-bottom: 1px solid #e5e7eb;
+  overflow-x: auto;
+}
+
+.tab {
+  padding: 0.75rem 1.5rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #6b7280;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  background: #f9fafb;
+  color: #374151;
+}
+
+.tab.active {
+  background: white;
+  color: #667eea;
+  border-color: #667eea;
+  border-bottom-color: white;
+  position: relative;
+  z-index: 1;
+}
+
+.tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: white;
+}
