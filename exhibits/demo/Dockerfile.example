@@ -1,0 +1,9 @@
+# Example ancillary Dockerfile for demo exhibit
+FROM python:3.13-slim
+
+WORKDIR /app
+
+# This is just a placeholder example to demonstrate ancillary files
+RUN echo "Hello from ancillary Dockerfile!"
+
+CMD ["python", "-c", "print('Demo container running')"]

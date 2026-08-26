@@ -41,6 +41,31 @@ class VerifyShell(BaseModel):
 Verify = VerifyManual | VerifyShell
 
 
+class AncillaryFiles(BaseModel):
+    """Ancillary files for a step (Dockerfiles, compose files, scripts, etc.)."""
+
+    dockerfile: str | None = Field(
+        default=None, description="Path to Dockerfile relative to exhibit directory"
+    )
+    compose: str | None = Field(
+        default=None,
+        description="Path to docker-compose.yml relative to exhibit directory",
+    )
+    scripts: list[str] = Field(
+        default_factory=list,
+        description="Paths to scripts relative to exhibit directory",
+    )
+
+
+class NavButton(BaseModel):
+    """Custom navigation button for non-linear navigation."""
+
+    label: str = Field(description="Button label text")
+    target: str = Field(
+        description="Target step ID (or 'previous' for back navigation)"
+    )
+
+
 class Step(BaseModel):
     """A single step in an exhibit."""
 
@@ -49,6 +74,13 @@ class Step(BaseModel):
     panes: list[Pane] = Field(description="Panes visible for this step")
     verify: Verify = Field(description="Verification method for this step")
     next: str | None = Field(description="ID of next step, or null if end of exhibit")
+    ancillary: AncillaryFiles | None = Field(
+        default=None, description="Optional ancillary files for this step"
+    )
+    nav: list[NavButton] | None = Field(
+        default=None,
+        description="Optional custom navigation buttons (overrides next/previous)",
+    )
 
 
 class SetupManifest(BaseModel):

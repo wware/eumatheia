@@ -62,3 +62,147 @@ One thing this reopens rather than closes: with narrative always visible, "Copy 
 ---
 
 > Regarding the "copy to terminal" question, I think whatever you hit the button for, it should be copied to the currently active pane. It is the user's responsibility to choose the right pane before hitting the Copy button.
+
+---
+
+## Onward and upward: Directory-based exhibits with ancillary files
+
+### Goal
+Support per-step Docker configurations and other ancillary files (Dockerfiles, compose files, scripts, etc.) to enable dynamic container provisioning for each session.
+
+### Implementation Plan
+
+#### 1. Refactor exhibit structure from files to directories
+**Current:**
+```
+exhibits/
+  demo.yaml
+  fastapi-crud.yaml
+```
+
+**Target:**
+```
+exhibits/
+  demo/
+    exhibit.yaml              # Main lesson plan
+    narratives/               # Step narratives (or keep at project root)
+      hello-world.md
+      try-vim.md
+  fastapi-crud/
+    exhibit.yaml
+    Dockerfile.step1          # Ancillary file example
+    docker-compose.step2.yml  # Ancillary file example
+    setup-script.sh           # Ancillary file example
+    narratives/
+      ...
+```
+
+**Tasks:**
+- [ ] Create exhibit directories and move YAML files to `exhibit.yaml` within each
+- [ ] Update `.gitignore` if needed
+- [ ] Decide: keep narratives in exhibit dirs or centralized? (Lean: keep centralized for now, easier to share across exhibits)
+
+#### 2. Extend YAML schema to support ancillary files
+**Example step with ancillary files:**
+```yaml
+- id: docker-intro
+  narrative: narratives/docker-intro.md
+  panes:
+    - type: terminal
+      label: "Shell"
+    - type: iframe
+      label: "App"
+      path: http://localhost:9000
+  ancillary:
+    dockerfile: Dockerfile.intro      # Relative to exhibit directory
+    compose: docker-compose.intro.yml
+    scripts:
+      - setup.sh
+      - seed-data.sql
+  verify:
+    type: manual
+  next: docker-advanced
+```
+
+**Tasks:**
+- [ ] Update `src/eumatheia/models.py` (or wherever Step/Exhibit pydantic models live) to add `ancillary: Optional[dict]` field
+- [ ] Update exhibit YAML examples to demonstrate ancillary file usage
+
+#### 3. Update ExhibitLoader to handle directory-based structure
+**File:** `src/eumatheia/exhibit_loader.py`
+
+**Changes:**
+- [ ] Update `load_exhibit(exhibit_id)` to look for `exhibits/{exhibit_id}/exhibit.yaml` instead of `exhibits/{exhibit_id}.yaml`
+- [ ] Add method to resolve ancillary file paths relative to exhibit directory
+- [ ] Add validation that referenced ancillary files actually exist
+- [ ] Update error handling for missing files
+
+#### 4. Implement per-session container provisioning
+**File:** `src/eumatheia/main.py`
+
+**Current stubbed logic (line 98):**
+```python
+# TODO: Provision Docker container for this session
+```
+
+**Implementation:**
+- [ ] Create new module `src/eumatheia/container_manager.py` with class `ContainerManager`
+- [ ] Methods needed:
+  - `provision_container(session_id, exhibit_id, step_id, ancillary_files) -> dict`
+  - `destroy_container(session_id) -> bool`
+  - `get_container_ports(session_id) -> dict`
+- [ ] Use Docker Python SDK or subprocess calls to `docker-compose`
+- [ ] Generate session-specific docker-compose.yml from exhibit's ancillary files
+- [ ] Map container ports dynamically (avoid conflicts between sessions)
+- [ ] Update proxy endpoints (`/terminal/*`, `/app/*`) to route based on session_id
+
+#### 5. Wire up container lifecycle to session lifecycle
+**Tasks:**
+- [ ] Call `provision_container()` in `POST /api/sessions` after session creation
+- [ ] Call `destroy_container()` in `DELETE /api/sessions` and in reaper task
+- [ ] Update `SessionManager` to track container metadata (ports, container IDs)
+- [ ] Handle container startup time (may need to poll/wait before session is ready)
+
+#### 6. Configuration and environment
+**Tasks:**
+- [ ] Add environment variable `EXHIBITS_DIR` (default: `./exhibits`) to `main.py`
+- [ ] Pass to `ExhibitLoader` constructor
+- [ ] Update `Dockerfile.orchestrator` to copy exhibits directory structure
+- [ ] Update `docker-compose.yml` volume mounts if needed
+
+#### 7. Support non-linear navigation (optional nav section)
+**Example YAML:**
+```yaml
+- id: choose-your-path
+  narrative: narratives/choose-path.md
+  panes: [...]
+  nav:  # Optional: overrides default next/previous buttons
+    - label: "Learn Docker"
+      target: docker-intro
+    - label: "Learn Kubernetes"
+      target: k8s-intro
+    - label: "Back"
+      target: previous  # Special keyword
+```
+
+**Tasks:**
+- [ ] Add `nav: Optional[List[NavButton]]` to Step model
+- [ ] Update `StepNav` React component to render custom buttons if `nav` exists
+- [ ] Update `PUT /api/sessions/{id}/step` to accept arbitrary step_id (already does!)
+- [ ] Frontend: render nav buttons instead of next/previous when nav is present
+
+---
+
+### Implementation Order
+1. **Refactor exhibit structure** (1-2) - Non-breaking, can do first
+2. **Update loader** (3) - Required for ancillary files to work
+3. **Container provisioning** (4-5) - Core new functionality
+4. **Configuration** (6) - Supporting infrastructure
+5. **Non-linear nav** (7) - Nice-to-have, can be deferred
+
+### Testing Strategy
+- [ ] Write pytest tests for ExhibitLoader with directory structure
+- [ ] Create test exhibit with ancillary files
+- [ ] Manual test: create session, verify container is provisioned
+- [ ] Manual test: delete session, verify container is destroyed
+- [ ] Test: multiple concurrent sessions with separate containers

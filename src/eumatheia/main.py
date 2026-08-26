@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException, Request, Response, WebSocket
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
+from .container_manager import ContainerManager
 from .exhibit_loader import ExhibitLoader
 from .session_manager import SessionManager
 
@@ -16,27 +17,31 @@ from .session_manager import SessionManager
 # Global state
 session_manager: SessionManager | None = None
 exhibit_loader: ExhibitLoader | None = None
+container_manager: ContainerManager | None = None
 
 
 async def reaper_task():
     """Background task to reap idle sessions."""
     while True:
         await asyncio.sleep(60)  # Check every minute
-        if session_manager:
+        if session_manager and container_manager:
             reaped = session_manager.reap_idle_sessions()
             if reaped:
                 print(f"Reaped {len(reaped)} idle sessions: {reaped}")
-                # TODO: Clean up Docker containers for reaped sessions
+                # Clean up Docker containers for reaped sessions
+                for session_id in reaped:
+                    container_manager.destroy_container(session_id)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
-    global session_manager, exhibit_loader
+    global session_manager, exhibit_loader, container_manager
 
     # Startup
     session_manager = SessionManager(idle_timeout_seconds=1800)  # 30 minutes
     exhibit_loader = ExhibitLoader(Path(__file__).parent.parent.parent / "exhibits")
+    container_manager = ContainerManager(base_port=10000)
 
     # Start reaper task
     reaper = asyncio.create_task(reaper_task())
@@ -95,7 +100,21 @@ async def create_session(request: Request, exhibit_id: str):
     # Create session
     session = session_manager.create_session(exhibit_id, exhibit.first_step.id)
 
-    # TODO: Provision Docker container for this session
+    # Provision Docker container for this session
+    first_step = exhibit.first_step
+    exhibit_dir = exhibit_loader._exhibits_dir / exhibit_id
+
+    dockerfile = first_step.ancillary.dockerfile if first_step.ancillary else None
+    compose_file = first_step.ancillary.compose if first_step.ancillary else None
+
+    container_manager.provision_container(
+        session_id=session.session_id,
+        exhibit_id=exhibit_id,
+        step_id=first_step.id,
+        exhibit_dir=exhibit_dir,
+        dockerfile=dockerfile,
+        compose_file=compose_file,
+    )
 
     return {
         "session_id": session.session_id,
@@ -210,7 +229,8 @@ async def delete_session(session_id: str):
     if not deleted:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    # TODO: Clean up Docker container
+    # Clean up Docker container
+    container_manager.destroy_container(session_id)
 
     return {"message": "Session deleted"}
 
