@@ -225,6 +225,13 @@ function App() {
             >
               Start FastAPI Tutorial
             </button>
+
+            <button
+              onClick={() => startSession('docker-demo')}
+              disabled={loading}
+            >
+              Start Docker Demo (Ancillary Files)
+            </button>
           </div>
 
           {loading && <p className="status">Creating session...</p>}

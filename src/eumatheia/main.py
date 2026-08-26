@@ -5,14 +5,12 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import httpx
-from fastapi import FastAPI, HTTPException, Request, Response, WebSocket
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.staticfiles import StaticFiles
 
 from .container_manager import ContainerManager
 from .exhibit_loader import ExhibitLoader
 from .session_manager import SessionManager
-
 
 # Global state
 session_manager: SessionManager | None = None
@@ -72,6 +70,7 @@ app.mount("/assets", StaticFiles(directory=frontend_dist / "assets"), name="asse
 async def root():
     """Serve the frontend."""
     from fastapi.responses import FileResponse
+
     return FileResponse(frontend_dist / "index.html")
 
 
@@ -160,8 +159,7 @@ async def get_current_step(session_id: str):
     # Load narrative content
     narrative_path = Path(__file__).parent.parent.parent / step.narrative
     try:
-        with open(narrative_path, "r") as f:
-            narrative_content = f.read()
+        narrative_content = narrative_path.read_text()
     except FileNotFoundError:
         narrative_content = f"*Narrative not found: {step.narrative}*"
 
@@ -259,16 +257,26 @@ async def proxy_app(request: Request, path: str):
             return Response(
                 content=response.content,
                 status_code=response.status_code,
-                headers={k: v for k, v in response.headers.items() if k.lower() not in ["content-encoding", "content-length", "transfer-encoding"]},
+                headers={
+                    k: v
+                    for k, v in response.headers.items()
+                    if k.lower() not in ["content-encoding", "content-length", "transfer-encoding"]
+                },
             )
         except httpx.RequestError as e:
             import traceback
+
             traceback.print_exc()
-            raise HTTPException(status_code=502, detail=f"Error connecting to app: {type(e).__name__}: {str(e)}")
-        except Exception as e:
+            raise HTTPException(
+                status_code=502, detail=f"Error connecting to app: {type(e).__name__}: {e!s}"
+            )
+        except Exception as e:  # noqa: BLE001 - intentionally catch all for proxy errors
             import traceback
+
             traceback.print_exc()
-            raise HTTPException(status_code=500, detail=f"Unexpected error: {type(e).__name__}: {str(e)}")
+            raise HTTPException(
+                status_code=500, detail=f"Unexpected error: {type(e).__name__}: {e!s}"
+            )
 
 
 @app.api_route("/terminal/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
@@ -301,16 +309,26 @@ async def proxy_terminal(request: Request, path: str):
             return Response(
                 content=response.content,
                 status_code=response.status_code,
-                headers={k: v for k, v in response.headers.items() if k.lower() not in ["content-encoding", "content-length", "transfer-encoding"]},
+                headers={
+                    k: v
+                    for k, v in response.headers.items()
+                    if k.lower() not in ["content-encoding", "content-length", "transfer-encoding"]
+                },
             )
         except httpx.RequestError as e:
             import traceback
+
             traceback.print_exc()
-            raise HTTPException(status_code=502, detail=f"Error connecting to terminal: {type(e).__name__}: {str(e)}")
-        except Exception as e:
+            raise HTTPException(
+                status_code=502, detail=f"Error connecting to terminal: {type(e).__name__}: {e!s}"
+            )
+        except Exception as e:  # noqa: BLE001 - intentionally catch all for proxy errors
             import traceback
+
             traceback.print_exc()
-            raise HTTPException(status_code=500, detail=f"Unexpected error: {type(e).__name__}: {str(e)}")
+            raise HTTPException(
+                status_code=500, detail=f"Unexpected error: {type(e).__name__}: {e!s}"
+            )
 
 
 if __name__ == "__main__":

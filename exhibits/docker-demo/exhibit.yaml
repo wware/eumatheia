@@ -1,0 +1,40 @@
+exhibit: docker-demo
+title: "Docker with Ancillary Files Demo"
+setup: []
+steps:
+  - id: intro
+    narrative: narratives/docker-intro.md
+    panes:
+      - type: terminal
+        label: "Shell"
+    verify:
+      type: manual
+    next: build-image
+    # No ancillary files for intro step
+
+  - id: build-image
+    narrative: narratives/docker-build.md
+    panes:
+      - type: terminal
+        label: "Shell"
+    ancillary:
+      dockerfile: Dockerfile.app
+      scripts:
+        - setup.sh
+    verify:
+      type: manual
+    next: run-container
+
+  - id: run-container
+    narrative: narratives/docker-run.md
+    panes:
+      - type: terminal
+        label: "Shell"
+      - type: iframe
+        label: "App"
+        path: "http://localhost:9000"
+    ancillary:
+      compose: docker-compose.app.yml
+    verify:
+      type: manual
+    next: null
