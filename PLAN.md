@@ -187,8 +187,8 @@
 ### 5.3 Frontend updates
 - [x] TerminalPane already uses `/terminal/` endpoint
 - [x] IframePane already uses `/app/` endpoint
-- [ ] Test frontend with deployed orchestrator (requires Phase 6)
-- [ ] Rebuild frontend and Docker image (part of Phase 6)
+- [x] Test frontend with deployed orchestrator (tested successfully via port-forward)
+- [x] Rebuild frontend and Docker image (deployed to kind cluster)
 
 ---
 
