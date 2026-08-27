@@ -119,6 +119,6 @@ class SessionManager:
         Generate a unique session ID.
 
         Returns:
-            Session ID in format 'sess-XXXXXXXX' (8 hex chars)
+            Session ID as 8 hex chars (no prefix - namespace_manager adds 'sess-' prefix)
         """
-        return f"sess-{secrets.token_hex(4)}"
+        return secrets.token_hex(4)
