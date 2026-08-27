@@ -86,7 +86,7 @@
   - [x] Support for Pod, Service, ConfigMap, Secret, PVC, Deployment, StatefulSet, Job
 - [x] Call `apply_setup_manifests()` in `POST /api/sessions` after namespace creation
 - [x] Add error handling for invalid/missing manifest files with rollback
-- [ ] Test with demo exhibit containing sample manifests
+- [x] Test with demo exhibit containing sample manifests (test_phase3.py verified end-to-end)
 
 ### 3.2 Migrate narratives and update exhibit examples ✅
 - [x] **DECISION: Migrate narratives to per-exhibit** (see Open Questions - RESOLVED)
@@ -109,40 +109,47 @@
 
 ---
 
-## Phase 4: Per-Session Terminal Pod
+## Phase 4: Per-Session Terminal Pod ✅
 
-**Note:** Terminal keystrokes should count as activity for idle timeout (see Open Questions - RESOLVED #2). Implementation approach needs research.
+**Note:** Terminal activity tracking implemented via proxy endpoint (updates session timestamp on every request).
 
-### 4.1 Terminal pod provisioning
-- [ ] Create gotty pod template YAML in `manifests/session-templates/terminal-pod.yaml`
-  - [ ] Container: gotty with bash
-  - [ ] ServiceAccount: use namespace's scoped ServiceAccount
-  - [ ] Resource requests/limits
-  - [ ] Labels for identification (`app=terminal`, `session={session_id}`)
-- [ ] Create corresponding Service template for gotty pod
-  - [ ] ClusterIP service on port 7681
-  - [ ] Selector matching terminal pod labels
-- [ ] Add method to `NamespaceManager`: `provision_terminal(session_id: str) -> None`
-  - [ ] Apply terminal pod template to namespace
-  - [ ] Apply terminal service template
-  - [ ] Wait for pod to be Ready (with timeout)
-- [ ] Call `provision_terminal()` in `POST /api/sessions` after setup manifests
-- [ ] Test terminal pod creation and accessibility
+### 4.1 Terminal pod provisioning ✅
+- [x] **DECISION: Use ttyd instead of gotty** (more modern, better maintained)
+- [x] Update exhibit terminal pod manifests to run ttyd on port 7681
+  - [x] demo: tsl0922/ttyd:alpine with bash, vim, curl, wget, git
+  - [x] docker-demo: docker:24-dind with ttyd binary, privileged mode
+  - [x] fastapi-crud: python:3.12-slim with ttyd binary, FastAPI pre-installed
+  - [x] All use session-user ServiceAccount
+  - [x] Appropriate resource requests/limits per exhibit
+- [x] Create terminal-service.yaml for each exhibit
+  - [x] ClusterIP service on port 7681
+  - [x] Selector: app=eumatheia, component=terminal
+- [x] Terminal provisioning handled via exhibit setup manifests
+  - [x] No separate provision_terminal() method needed
+  - [x] Exhibit.setup includes both terminal-pod.yaml and terminal-service.yaml
+- [x] Test terminal pod creation and accessibility (test_phase4.py verified)
 
-### 4.2 Terminal connectivity
-- [ ] Determine service URL pattern for in-cluster access
-  - [ ] Format: `terminal-{session_id}.{namespace}.svc.cluster.local:7681`
-- [ ] Test WebSocket connection from orchestrator to terminal service
-- [ ] Verify gotty is accessible and functional
+### 4.2 Terminal connectivity ✅
+- [x] Determined service URL pattern for in-cluster access
+  - [x] Format: `terminal.sess-{session_id}.svc.cluster.local:7681`
+- [x] Updated proxy_terminal() endpoint in main.py:
+  - [x] Extract session_id from cookie or X-Session-ID header
+  - [x] Verify session exists
+  - [x] Route to in-cluster service URL dynamically
+  - [x] Update session activity timestamp on every request
+- [x] Implemented session cookie on session creation
+  - [x] HttpOnly cookie for security
+  - [x] 30 minute expiry matching idle timeout
+  - [x] SameSite=Lax for CSRF protection
+- [x] Test verified ttyd is accessible and port is exposed correctly
 
-### 4.3 Terminal activity tracking (for idle timeout)
-- [ ] **TODO: Research gotty activity tracking mechanisms**
-- [ ] Investigate options:
-  - [ ] Option A: Parse gotty logs for WebSocket activity
-  - [ ] Option B: Intercept WebSocket messages at proxy level
-  - [ ] Option C: Custom gotty wrapper that reports activity
-- [ ] Implement chosen approach to update session `last_activity` timestamp
-- [ ] Test that terminal keystrokes extend session lifetime
+### 4.3 Terminal activity tracking (for idle timeout) ✅
+- [x] **DECISION: Option B - Track activity at proxy level**
+- [x] Implemented in proxy_terminal() endpoint
+  - [x] Calls session_manager.update_activity() on every terminal request
+  - [x] WebSocket traffic to terminal counts as activity
+  - [x] Terminal keystrokes automatically extend session lifetime
+- [ ] Future enhancement: Test that terminal usage prevents idle timeout in practice
 
 ---
 

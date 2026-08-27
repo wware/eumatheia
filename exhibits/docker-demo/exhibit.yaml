@@ -2,6 +2,7 @@ exhibit: docker-demo
 title: "Docker with Ancillary Files Demo"
 setup:
   - manifest: terminal-pod.yaml
+  - manifest: terminal-service.yaml
 steps:
   - id: intro
     narrative: docker-intro.md

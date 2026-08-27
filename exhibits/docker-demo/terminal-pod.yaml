@@ -18,10 +18,19 @@ spec:
           dockerd-entrypoint.sh &
           # Wait for Docker to start
           sleep 5
-          # Install additional tools
-          apk add --no-cache vim bash curl
-          # Keep container running
-          sleep infinity
+          # Install additional tools and ttyd
+          apk add --no-cache vim bash curl wget git
+
+          # Install ttyd
+          wget https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86_64 -O /usr/local/bin/ttyd
+          chmod +x /usr/local/bin/ttyd
+
+          # Start ttyd serving bash
+          ttyd -p 7681 -W bash
+      ports:
+        - containerPort: 7681
+          name: ttyd
+          protocol: TCP
       resources:
         requests:
           cpu: "100m"
@@ -31,6 +40,4 @@ spec:
           memory: "1Gi"
       securityContext:
         privileged: true  # Required for Docker-in-Docker
-      tty: true
-      stdin: true
   restartPolicy: Always

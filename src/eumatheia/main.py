@@ -128,11 +128,25 @@ async def create_session(request: Request, exhibit_id: str):
                 detail=f"Failed to apply setup manifests: {type(e).__name__}: {e!s}",
             )
 
-    return {
+    # Create response with session cookie
+    response_data = {
         "session_id": session.session_id,
         "exhibit_id": session.exhibit_id,
         "current_step": session.current_step,
     }
+
+    from fastapi.responses import JSONResponse
+
+    response = JSONResponse(content=response_data)
+    # Set session cookie (HttpOnly for security, 30 min expiry matching idle timeout)
+    response.set_cookie(
+        key="session_id",
+        value=session.session_id,
+        httponly=True,
+        max_age=1800,  # 30 minutes
+        samesite="lax",
+    )
+    return response
 
 
 @app.get("/api/sessions/{session_id}")
@@ -299,12 +313,29 @@ async def proxy_app(request: Request, path: str):
 @app.api_route("/terminal/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 async def proxy_terminal(request: Request, path: str):
     """
-    Proxy requests to the terminal service.
-    For now, proxies to a shared terminal. Later will route to per-session containers.
+    Proxy requests to the per-session terminal service in Kubernetes.
     """
-    # Construct target URL - proxy to host's localhost where terminal is exposed
-    # For prototype, terminal is exposed on host port 7681
-    target_url = f"http://host.docker.internal:7681/{path}"
+    # Extract session ID from cookie or header
+    session_id = request.cookies.get("session_id") or request.headers.get("X-Session-ID")
+
+    if not session_id:
+        raise HTTPException(
+            status_code=400, detail="No session_id found in cookie or X-Session-ID header"
+        )
+
+    # Verify session exists
+    session = session_manager.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Update session activity
+    session_manager.update_activity(session_id)
+
+    # Construct target URL to in-cluster terminal service
+    # Service name: terminal, in namespace: sess-{session_id}
+    # DNS: terminal.sess-{session_id}.svc.cluster.local
+    namespace = f"sess-{session_id}"
+    target_url = f"http://terminal.{namespace}.svc.cluster.local:7681/{path}"
 
     # Forward query parameters
     if request.url.query:

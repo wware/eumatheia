@@ -9,15 +9,19 @@ spec:
   serviceAccountName: session-user
   containers:
     - name: terminal
-      image: ubuntu:22.04
-      command: ["/bin/bash"]
+      image: tsl0922/ttyd:alpine
+      command: ["/bin/sh"]
       args:
         - -c
         - |
           # Install basic tools
-          apt-get update && apt-get install -y vim curl wget git
-          # Keep container running
-          sleep infinity
+          apk add --no-cache vim curl wget git bash
+          # Start ttyd serving bash
+          ttyd -p 7681 -W bash
+      ports:
+        - containerPort: 7681
+          name: ttyd
+          protocol: TCP
       resources:
         requests:
           cpu: "50m"
@@ -25,6 +29,4 @@ spec:
         limits:
           cpu: "200m"
           memory: "512Mi"
-      tty: true
-      stdin: true
   restartPolicy: Always

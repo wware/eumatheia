@@ -2,6 +2,7 @@ exhibit: demo
 title: "Getting Started with Eumatheia"
 setup:
   - manifest: terminal-pod.yaml
+  - manifest: terminal-service.yaml
 steps:
   - id: hello-world
     narrative: hello-world.md
