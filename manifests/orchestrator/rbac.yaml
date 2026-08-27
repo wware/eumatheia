@@ -27,6 +27,7 @@ rules:
       - pods/log
       - pods/exec
       - services
+      - serviceaccounts
       - configmaps
       - secrets
       - persistentvolumeclaims
