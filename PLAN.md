@@ -39,33 +39,35 @@
 
 ---
 
-## Phase 2: Namespace Provisioner Module
+## Phase 2: Namespace Provisioner Module ✅
 
-### 2.1 Replace `container_manager.py`
-- [ ] Create new module `src/eumatheia/namespace_manager.py`
-- [ ] Implement `NamespaceManager` class
-  - [ ] Constructor: initialize Kubernetes client
-  - [ ] Method: `create_namespace(session_id: str) -> None`
-    - [ ] Create namespace with name `sess-{session_id}`
-    - [ ] Apply `ResourceQuota` from template
-    - [ ] Apply `LimitRange` from template
-    - [ ] Apply `NetworkPolicy` from template
-    - [ ] Create `ServiceAccount`, `Role`, `RoleBinding`
-  - [ ] Method: `delete_namespace(session_id: str) -> bool`
-    - [ ] Delete namespace (cascading delete handles all resources)
-  - [ ] Method: `get_namespace_metadata(session_id: str) -> dict`
-    - [ ] Return namespace status, age, resource usage
+### 2.1 Replace `container_manager.py` ✅
+- [x] Create new module `src/eumatheia/namespace_manager.py`
+- [x] Implement `NamespaceManager` class
+  - [x] Constructor: initialize Kubernetes client (with fallback to kubeconfig)
+  - [x] Method: `create_namespace(session_id: str) -> dict`
+    - [x] Create namespace with name `sess-{session_id}`
+    - [x] Apply `ResourceQuota` from template
+    - [x] Apply `LimitRange` from template
+    - [x] Apply `NetworkPolicy` from template
+    - [x] Create `ServiceAccount`, `Role`, `RoleBinding`
+  - [x] Method: `delete_namespace(session_id: str) -> None`
+    - [x] Delete namespace (cascading delete handles all resources)
+  - [x] Method: `get_namespace_metadata(session_id: str) -> dict | None`
+    - [x] Return namespace status, age, labels
+  - [x] Method: `list_active_sessions() -> list[dict]`
+- [x] Helper method `_load_template()` for template processing
 - [ ] Use frozen Pydantic model pattern for metadata (like `Session`)
 - [ ] Write unit tests for namespace creation/deletion (mock k8s client)
 
-### 2.2 Wire into orchestrator
-- [ ] Update `main.py` global state to use `NamespaceManager` instead of `ContainerManager`
-- [ ] Update `lifespan()` to initialize `NamespaceManager`
-- [ ] Update `POST /api/sessions` to call `create_namespace()`
-- [ ] Update `DELETE /api/sessions` to call `delete_namespace()`
-- [ ] Update `reaper_task()` to call `delete_namespace()` for reaped sessions
-- [ ] Remove old `container_manager.py` module
-- [ ] Update imports throughout codebase
+### 2.2 Wire into orchestrator ✅
+- [x] Update `main.py` global state to use `NamespaceManager` instead of `ContainerManager`
+- [x] Update `lifespan()` to initialize `NamespaceManager`
+- [x] Update `POST /api/sessions` to call `create_namespace()`
+- [x] Update `DELETE /api/sessions` to call `delete_namespace()`
+- [x] Update `reaper_task()` to call `delete_namespace()` for reaped sessions
+- [x] Remove old `container_manager.py` module
+- [x] Update imports throughout codebase
 
 ---
 

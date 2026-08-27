@@ -8,38 +8,38 @@ import httpx
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.staticfiles import StaticFiles
 
-from .container_manager import ContainerManager
 from .exhibit_loader import ExhibitLoader
+from .namespace_manager import NamespaceManager
 from .session_manager import SessionManager
 
 # Global state
 session_manager: SessionManager | None = None
 exhibit_loader: ExhibitLoader | None = None
-container_manager: ContainerManager | None = None
+namespace_manager: NamespaceManager | None = None
 
 
 async def reaper_task():
     """Background task to reap idle sessions."""
     while True:
         await asyncio.sleep(60)  # Check every minute
-        if session_manager and container_manager:
+        if session_manager and namespace_manager:
             reaped = session_manager.reap_idle_sessions()
             if reaped:
                 print(f"Reaped {len(reaped)} idle sessions: {reaped}")
-                # Clean up Docker containers for reaped sessions
+                # Clean up Kubernetes namespaces for reaped sessions
                 for session_id in reaped:
-                    container_manager.destroy_container(session_id)
+                    await namespace_manager.delete_namespace(session_id)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
-    global session_manager, exhibit_loader, container_manager
+    global session_manager, exhibit_loader, namespace_manager
 
     # Startup
     session_manager = SessionManager(idle_timeout_seconds=1800)  # 30 minutes
     exhibit_loader = ExhibitLoader(Path(__file__).parent.parent.parent / "exhibits")
-    container_manager = ContainerManager(base_port=10000)
+    namespace_manager = NamespaceManager()
 
     # Start reaper task
     reaper = asyncio.create_task(reaper_task())
@@ -99,21 +99,16 @@ async def create_session(request: Request, exhibit_id: str):
     # Create session
     session = session_manager.create_session(exhibit_id, exhibit.first_step.id)
 
-    # Provision Docker container for this session
-    first_step = exhibit.first_step
-    exhibit_dir = exhibit_loader._exhibits_dir / exhibit_id
-
-    dockerfile = first_step.ancillary.dockerfile if first_step.ancillary else None
-    compose_file = first_step.ancillary.compose if first_step.ancillary else None
-
-    container_manager.provision_container(
-        session_id=session.session_id,
-        exhibit_id=exhibit_id,
-        step_id=first_step.id,
-        exhibit_dir=exhibit_dir,
-        dockerfile=dockerfile,
-        compose_file=compose_file,
-    )
+    # Provision Kubernetes namespace for this session
+    try:
+        namespace_metadata = await namespace_manager.create_namespace(session.session_id)
+        print(f"Created namespace for session {session.session_id}: {namespace_metadata}")
+    except Exception as e:  # noqa: BLE001 - intentionally catch all for namespace provisioning
+        # Roll back session if namespace creation fails
+        session_manager.delete_session(session.session_id)
+        raise HTTPException(
+            status_code=500, detail=f"Failed to provision namespace: {type(e).__name__}: {e!s}"
+        )
 
     return {
         "session_id": session.session_id,
@@ -227,8 +222,11 @@ async def delete_session(session_id: str):
     if not deleted:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    # Clean up Docker container
-    container_manager.destroy_container(session_id)
+    # Clean up Kubernetes namespace
+    try:
+        await namespace_manager.delete_namespace(session_id)
+    except Exception as e:  # noqa: BLE001 - intentionally catch all for cleanup
+        print(f"Warning: Failed to delete namespace for session {session_id}: {e}")
 
     return {"message": "Session deleted"}
 
