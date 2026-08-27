@@ -9,17 +9,18 @@
 ## Phase 1: Kubernetes Infrastructure Setup
 
 ### 1.1 Cluster Setup
-- [ ] Choose between `kind` and `minikube` for the shared cluster
-- [ ] Document installation/setup steps for target VM (DigitalOcean/AWS)
-- [ ] Stand up the cluster on a development machine for testing
+- [ ] **DECISION: Use kind** (see Open Questions - RESOLVED)
+- [ ] Document kind installation steps for target VM (DigitalOcean/AWS)
+- [ ] Stand up kind cluster on development machine for testing
 - [ ] Verify cluster is accessible and healthy (`kubectl cluster-info`)
 - [ ] Add `kubernetes` Python package to `pyproject.toml` dependencies
 - [ ] Test basic Kubernetes Python client connectivity
 
 ### 1.2 Namespace Template Design
 - [ ] Design `ResourceQuota` YAML template for per-session limits
-  - [ ] Set CPU limits (e.g., 2 cores max)
-  - [ ] Set memory limits (e.g., 4Gi max)
+  - [ ] **DECISION: 2 CPU, 4Gi RAM** (start conservative, see Open Questions - RESOLVED)
+  - [ ] Set CPU limits: 2 cores max
+  - [ ] Set memory limits: 4Gi max
   - [ ] Set storage limits if using PVCs
 - [ ] Design `LimitRange` YAML template for per-pod defaults
   - [ ] Default CPU request/limit per container
@@ -66,6 +67,8 @@
 
 ## Phase 3: Setup Manifests Application
 
+**Note:** Narratives will be migrated to per-exhibit directories in this phase (see Phase 3.2).
+
 ### 3.1 Implement manifest application
 - [ ] Create method in `NamespaceManager`: `apply_setup_manifests(session_id: str, manifests: list[SetupManifest]) -> None`
 - [ ] For each manifest in `Exhibit.setup`:
@@ -78,7 +81,18 @@
 - [ ] Add error handling for invalid/missing manifest files
 - [ ] Test with demo exhibit containing sample manifests
 
-### 3.2 Update exhibit examples
+### 3.2 Migrate narratives and update exhibit examples
+- [ ] **DECISION: Migrate narratives to per-exhibit** (see Open Questions - RESOLVED)
+- [ ] Create `exhibits/{exhibit_id}/narratives/` directories
+- [ ] Move narratives from `narratives/` to respective exhibit directories:
+  - [ ] `narratives/hello-world.md` → `exhibits/demo/narratives/hello-world.md`
+  - [ ] `narratives/try-vim.md` → `exhibits/demo/narratives/try-vim.md`
+  - [ ] `narratives/docker-*.md` → `exhibits/docker-demo/narratives/`
+  - [ ] `narratives/fastapi-*.md` → `exhibits/fastapi-crud/narratives/`
+- [ ] Update `Step.narrative` paths in all `exhibit.yaml` files to be relative
+  - [ ] Example: `narrative: narratives/hello-world.md` → `narrative: hello-world.md`
+- [ ] Update `main.py` narrative loading to resolve from `exhibits/{exhibit_id}/narratives/`
+- [ ] Delete empty `narratives/` directory at project root
 - [ ] Create example Kubernetes manifests for demo exhibits
   - [ ] Simple pod definition for `demo` exhibit
   - [ ] Deployment + Service for `fastapi-crud` exhibit
@@ -89,6 +103,8 @@
 ---
 
 ## Phase 4: Per-Session Terminal Pod
+
+**Note:** Terminal keystrokes should count as activity for idle timeout (see Open Questions - RESOLVED #2). Implementation approach needs research.
 
 ### 4.1 Terminal pod provisioning
 - [ ] Create gotty pod template YAML in `manifests/session-templates/terminal-pod.yaml`
@@ -112,6 +128,15 @@
 - [ ] Test WebSocket connection from orchestrator to terminal service
 - [ ] Verify gotty is accessible and functional
 
+### 4.3 Terminal activity tracking (for idle timeout)
+- [ ] **TODO: Research gotty activity tracking mechanisms**
+- [ ] Investigate options:
+  - [ ] Option A: Parse gotty logs for WebSocket activity
+  - [ ] Option B: Intercept WebSocket messages at proxy level
+  - [ ] Option C: Custom gotty wrapper that reports activity
+- [ ] Implement chosen approach to update session `last_activity` timestamp
+- [ ] Test that terminal keystrokes extend session lifetime
+
 ---
 
 ## Phase 5: Per-Session Routing and Reverse Proxy
@@ -128,14 +153,19 @@
 - [ ] Handle missing/unavailable services gracefully (return 503)
 
 ### 5.2 Session identification
-- [ ] Decide how to identify session from request
-  - [ ] Option A: URL path includes session ID (`/sess-{id}/terminal/...`)
-  - [ ] Option B: Session cookie or header
-  - [ ] **Recommendation:** URL path for clarity and debuggability
-- [ ] Update proxy endpoints to extract session ID from URL
-- [ ] Update frontend to use new URL format for iframe sources
-  - [ ] `TerminalPane`: use `/sess-{session_id}/terminal/` as iframe src
-  - [ ] `IframePane`: use `/sess-{session_id}/app/{path}` for apps
+- [ ] **DECISION: Option B - Session cookie/header** (see Open Questions - RESOLVED)
+- [ ] Implement session cookie on session creation (`POST /api/sessions`)
+  - [ ] Set HttpOnly cookie with session_id
+  - [ ] Set appropriate expiry (match idle timeout)
+- [ ] Update proxy endpoints to extract session ID from cookie/header
+  - [ ] Read session ID from cookie or `X-Session-ID` header
+  - [ ] Fall back to query parameter for iframe compatibility if needed
+- [ ] Update frontend to send session ID with requests
+  - [ ] Cookie automatically sent by browser
+  - [ ] Alternative: add `X-Session-ID` header to API requests
+- [ ] Keep iframe URLs simple (no session ID in path)
+  - [ ] `TerminalPane`: use `/terminal/` as iframe src (cookie provides session)
+  - [ ] `IframePane`: use `/app/{path}` for apps (cookie provides session)
 
 ### 5.3 Frontend updates
 - [ ] Update `TerminalPane.tsx` to construct session-specific terminal URL
@@ -148,10 +178,10 @@
 ## Phase 6: Ancillary Files Integration
 
 ### 6.1 Container image building from ancillary Dockerfiles
-- [ ] Decide on image build strategy:
-  - [ ] Option A: Pre-build images, reference by tag in pod spec
-  - [ ] Option B: Build images on-demand per session (slower, more flexible)
-  - [ ] **Recommendation:** Pre-build for now, add build-on-demand later
+- [ ] **DECISION: Hybrid approach** (see Open Questions - RESOLVED)
+  - [ ] Pre-build and tag for common/stable steps
+  - [ ] Build on-demand for custom/experimental steps
+  - [ ] Check for pre-built tag first, fall back to build
 - [ ] For `ancillary.dockerfile` in step definition:
   - [ ] Build image: `docker build -f {dockerfile} -t eumatheia-{exhibit_id}-{step_id}:latest .`
   - [ ] Push to registry (local registry, Docker Hub, or cluster-local registry)
@@ -177,17 +207,16 @@
 ## Phase 7: Verification System
 
 ### 7.1 Shell verification execution
+- [ ] **DECISION: Use kubectl exec** (see Open Questions - RESOLVED)
 - [ ] Create new endpoint: `POST /api/sessions/{id}/verify`
 - [ ] For `verify.type == "shell"`:
-  - [ ] Use `kubectl exec` into terminal pod (or designated verify pod)
+  - [ ] Use `kubectl exec` into terminal pod
   - [ ] Run `verify.command` in pod
   - [ ] Capture stdout/stderr
   - [ ] Check if `verify.expect_contains` string is in output
   - [ ] Return `{"passed": bool, "output": str}`
-- [ ] Alternative: create short-lived Job for verification
-  - [ ] Pros: Isolated from learner's terminal state
-  - [ ] Cons: Slower, more complex
-  - [ ] **Recommendation:** Start with `kubectl exec`, add Job option later
+- [ ] Monitor for state contamination issues
+  - [ ] If learner's terminal state affects verification, add Job-based option later
 - [ ] For `verify.type == "manual"`:
   - [ ] Return `{"passed": true}` (user-confirmed via Continue button)
 
@@ -331,42 +360,46 @@
 
 ---
 
-## Open Questions to Resolve
+## Open Questions - RESOLVED
 
-These need decisions before or during implementation:
+Decisions made for implementation:
 
-1. **Cluster choice:** kind vs. minikube?
-   - kind: more production-like, better CI integration
-   - minikube: simpler, more features out-of-box
+1. **Cluster choice: kind** ✅
+   - More production-like, better CI integration
+   - Use kind for both development and production
 
-2. **Idle timeout and activity tracking:**
-   - Current: HTTP hits only, 30 min
-   - Better: terminal keystrokes count as activity?
-   - How to track terminal activity without polling?
+2. **Idle timeout and activity tracking:** ✅
+   - Terminal keystrokes DO count as activity
+   - Implementation challenge: need to track activity without polling
+   - Possible approach: gotty logs/events, or WebSocket message timestamps
+   - **TODO:** Research gotty activity tracking mechanisms
 
-3. **Verification execution:**
-   - `kubectl exec` into terminal pod (simpler, faster)
-   - Short-lived Job (more isolated, slower)
-   - Recommendation: start with exec, measure if state contamination is an issue
+3. **Verification execution: kubectl exec** ✅
+   - Use `kubectl exec` into terminal pod (simpler, faster)
+   - Measure if state contamination becomes an issue
+   - Can add Job-based verification later if needed
 
-4. **Narrative location:**
-   - Current: centralized in `narratives/`
-   - Alternative: per-exhibit in `exhibits/{id}/narratives/`
-   - Decision needed: migrate now or keep centralized?
+4. **Narrative location: migrate now** ✅
+   - Move narratives from centralized `narratives/` to per-exhibit directories
+   - New structure: `exhibits/{id}/narratives/{filename}.md`
+   - Update `Step.narrative` path resolution to be exhibit-relative
+   - Keeps all exhibit content together
 
-5. **Ancillary image builds:**
-   - Pre-build and tag (faster, less flexible)
-   - Build on-demand per session (slower, more flexible)
-   - Hybrid: pre-build for common steps, on-demand for custom?
+5. **Ancillary image builds: hybrid** ✅
+   - Pre-build and tag for common/stable steps (faster)
+   - Build on-demand for custom/experimental steps (more flexible)
+   - Implementation: check for pre-built tag first, fall back to build
 
-6. **Session routing URL pattern:**
-   - Option A: `/sess-{id}/terminal/`, `/sess-{id}/app/`
-   - Option B: Session cookie/header, same paths
-   - Recommendation: URL path for transparency
+6. **Session routing URL pattern: Option B (cookie/header)** ✅
+   - Use session cookie or header, keep paths simple
+   - More shareable URLs (can share `/terminal/` link directly)
+   - Session identified by cookie set on session creation
+   - Frontend sends session ID in header or cookie with each request
 
-7. **Resource limits per namespace:**
-   - Need realistic numbers based on load testing
-   - Start conservative (2 CPU, 4Gi RAM), adjust based on usage
+7. **Resource limits per namespace: start conservative** ✅
+   - 2 CPU, 4Gi RAM per namespace (initial values)
+   - No empirical data yet, adjust based on real usage
+   - Monitor and tune after deployment
 
 ---
 
