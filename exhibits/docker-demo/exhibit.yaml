@@ -1,9 +1,10 @@
 exhibit: docker-demo
 title: "Docker with Ancillary Files Demo"
-setup: []
+setup:
+  - manifest: terminal-pod.yaml
 steps:
   - id: intro
-    narrative: narratives/docker-intro.md
+    narrative: docker-intro.md
     panes:
       - type: terminal
         label: "Shell"
@@ -13,7 +14,7 @@ steps:
     # No ancillary files for intro step
 
   - id: build-image
-    narrative: narratives/docker-build.md
+    narrative: docker-build.md
     panes:
       - type: terminal
         label: "Shell"
@@ -26,7 +27,7 @@ steps:
     next: run-container
 
   - id: run-container
-    narrative: narratives/docker-run.md
+    narrative: docker-run.md
     panes:
       - type: terminal
         label: "Shell"

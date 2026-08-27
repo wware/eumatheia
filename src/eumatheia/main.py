@@ -110,6 +110,24 @@ async def create_session(request: Request, exhibit_id: str):
             status_code=500, detail=f"Failed to provision namespace: {type(e).__name__}: {e!s}"
         )
 
+    # Apply exhibit setup manifests if any
+    if exhibit.setup:
+        try:
+            exhibit_dir = exhibit_loader._exhibits_dir / exhibit_id
+            manifest_files = [setup.manifest for setup in exhibit.setup]
+            await namespace_manager.apply_setup_manifests(
+                session.session_id, exhibit_dir, manifest_files
+            )
+            print(f"Applied {len(manifest_files)} setup manifests for session {session.session_id}")
+        except Exception as e:  # noqa: BLE001 - intentionally catch all for manifest application
+            # Clean up namespace and session if manifest application fails
+            await namespace_manager.delete_namespace(session.session_id)
+            session_manager.delete_session(session.session_id)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to apply setup manifests: {type(e).__name__}: {e!s}",
+            )
+
     return {
         "session_id": session.session_id,
         "exhibit_id": session.exhibit_id,
@@ -151,12 +169,13 @@ async def get_current_step(session_id: str):
     # Update activity
     session_manager.update_activity(session_id)
 
-    # Load narrative content
-    narrative_path = Path(__file__).parent.parent.parent / step.narrative
+    # Load narrative content from exhibit directory
+    exhibit_dir = exhibit_loader._exhibits_dir / session.exhibit_id
+    narrative_path = exhibit_dir / "narratives" / step.narrative
     try:
         narrative_content = narrative_path.read_text()
     except FileNotFoundError:
-        narrative_content = f"*Narrative not found: {step.narrative}*"
+        narrative_content = f"*Narrative not found: {narrative_path}*"
 
     return {
         "step": step.model_dump(),

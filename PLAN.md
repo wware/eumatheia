@@ -71,39 +71,40 @@
 
 ---
 
-## Phase 3: Setup Manifests Application
+## Phase 3: Setup Manifests Application ✅
 
-**Note:** Narratives will be migrated to per-exhibit directories in this phase (see Phase 3.2).
+**Note:** Narratives migrated to per-exhibit directories (see Phase 3.2).
 
-### 3.1 Implement manifest application
-- [ ] Create method in `NamespaceManager`: `apply_setup_manifests(session_id: str, manifests: list[SetupManifest]) -> None`
-- [ ] For each manifest in `Exhibit.setup`:
-  - [ ] Read manifest file from `exhibits/{exhibit_id}/{manifest.manifest}`
-  - [ ] Parse YAML (handle multi-document YAML with `---` separators)
-  - [ ] Set namespace field to `sess-{session_id}` for each resource
-  - [ ] Apply using Kubernetes Python client (`create_namespaced_*` methods)
-  - [ ] Handle idempotency (apply vs. create or patch)
-- [ ] Call `apply_setup_manifests()` in `POST /api/sessions` after namespace creation
-- [ ] Add error handling for invalid/missing manifest files
+### 3.1 Implement manifest application ✅
+- [x] Create method in `NamespaceManager`: `apply_setup_manifests(session_id: str, exhibit_dir: Path, manifest_files: list[str]) -> None`
+- [x] For each manifest in `Exhibit.setup`:
+  - [x] Read manifest file from `exhibits/{exhibit_id}/{manifest.manifest}`
+  - [x] Parse YAML (handle multi-document YAML with `---` separators)
+  - [x] Set namespace field to `sess-{session_id}` for each resource
+  - [x] Apply using Kubernetes Python client (`create_namespaced_*` methods)
+  - [x] Handle idempotency (409 errors treated as success)
+  - [x] Support for Pod, Service, ConfigMap, Secret, PVC, Deployment, StatefulSet, Job
+- [x] Call `apply_setup_manifests()` in `POST /api/sessions` after namespace creation
+- [x] Add error handling for invalid/missing manifest files with rollback
 - [ ] Test with demo exhibit containing sample manifests
 
-### 3.2 Migrate narratives and update exhibit examples
-- [ ] **DECISION: Migrate narratives to per-exhibit** (see Open Questions - RESOLVED)
-- [ ] Create `exhibits/{exhibit_id}/narratives/` directories
-- [ ] Move narratives from `narratives/` to respective exhibit directories:
-  - [ ] `narratives/hello-world.md` → `exhibits/demo/narratives/hello-world.md`
-  - [ ] `narratives/try-vim.md` → `exhibits/demo/narratives/try-vim.md`
-  - [ ] `narratives/docker-*.md` → `exhibits/docker-demo/narratives/`
-  - [ ] `narratives/fastapi-*.md` → `exhibits/fastapi-crud/narratives/`
-- [ ] Update `Step.narrative` paths in all `exhibit.yaml` files to be relative
-  - [ ] Example: `narrative: narratives/hello-world.md` → `narrative: hello-world.md`
-- [ ] Update `main.py` narrative loading to resolve from `exhibits/{exhibit_id}/narratives/`
-- [ ] Delete empty `narratives/` directory at project root
-- [ ] Create example Kubernetes manifests for demo exhibits
-  - [ ] Simple pod definition for `demo` exhibit
-  - [ ] Deployment + Service for `fastapi-crud` exhibit
-  - [ ] Add to `exhibits/{exhibit_id}/manifests/` directories
-- [ ] Update `exhibit.yaml` files to reference new manifests in `setup:` section
+### 3.2 Migrate narratives and update exhibit examples ✅
+- [x] **DECISION: Migrate narratives to per-exhibit** (see Open Questions - RESOLVED)
+- [x] Create `exhibits/{exhibit_id}/narratives/` directories
+- [x] Move narratives from `narratives/` to respective exhibit directories:
+  - [x] `narratives/hello-world.md` → `exhibits/demo/narratives/hello-world.md`
+  - [x] `narratives/try-vim.md` → `exhibits/demo/narratives/try-vim.md`
+  - [x] `narratives/docker-*.md` → `exhibits/docker-demo/narratives/`
+  - [x] `narratives/fastapi-*.md` → `exhibits/fastapi-crud/narratives/`
+- [x] Update `Step.narrative` paths in all `exhibit.yaml` files to be relative
+  - [x] Changed from `narrative: narratives/hello-world.md` to `narrative: hello-world.md`
+- [x] Update `main.py` narrative loading to resolve from `exhibits/{exhibit_id}/narratives/`
+- [x] Delete empty `narratives/` directory at project root
+- [x] Create example Kubernetes manifests for demo exhibits
+  - [x] `demo/terminal-pod.yaml` - Ubuntu with basic tools (vim, curl, git)
+  - [x] `docker-demo/terminal-pod.yaml` - Docker-in-Docker with privileged mode
+  - [x] `fastapi-crud/terminal-pod.yaml` - Python 3.12 with FastAPI/uvicorn
+- [x] Update `exhibit.yaml` files to reference new manifests in `setup:` section
 - [ ] Document manifest format and requirements
 
 ---

@@ -1,9 +1,10 @@
 exhibit: fastapi-crud
 title: "Build a FastAPI CRUD App"
-setup: []
+setup:
+  - manifest: terminal-pod.yaml
 steps:
   - id: intro
-    narrative: narratives/fastapi-intro.md
+    narrative: fastapi-intro.md
     panes:
       - type: terminal
         label: "Shell"
@@ -12,7 +13,7 @@ steps:
     next: run-app
 
   - id: run-app
-    narrative: narratives/fastapi-run.md
+    narrative: fastapi-run.md
     panes:
       - type: terminal
         label: "Shell"
@@ -24,7 +25,7 @@ steps:
     next: api-docs
 
   - id: api-docs
-    narrative: narratives/fastapi-api.md
+    narrative: fastapi-api.md
     panes:
       - type: terminal
         label: "Shell"

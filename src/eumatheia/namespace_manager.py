@@ -265,3 +265,106 @@ class NamespaceManager:
         except ApiException as e:
             logger.error(f"Failed to list namespaces: {e}")
             raise
+
+    async def apply_setup_manifests(
+        self, session_id: str, exhibit_dir: Path, manifest_files: list[str]
+    ) -> None:
+        """
+        Apply exhibit setup manifests to the session namespace.
+
+        Args:
+            session_id: Unique session identifier
+            exhibit_dir: Path to the exhibit directory
+            manifest_files: List of manifest filenames relative to exhibit_dir
+
+        Raises:
+            FileNotFoundError: If a manifest file doesn't exist
+            ApiException: If manifest application fails
+            ValueError: If manifest YAML is invalid
+        """
+        namespace_name = f"sess-{session_id}"
+        logger.info(f"Applying {len(manifest_files)} setup manifests to {namespace_name}")
+
+        for manifest_file in manifest_files:
+            manifest_path = exhibit_dir / manifest_file
+            if not manifest_path.exists():
+                raise FileNotFoundError(f"Setup manifest not found: {manifest_path}")
+
+            logger.info(f"Applying manifest: {manifest_file}")
+            content = manifest_path.read_text()
+
+            # Parse YAML (may contain multiple documents separated by ---)
+            try:
+                resources = list(yaml.safe_load_all(content))
+            except yaml.YAMLError as e:
+                raise ValueError(f"Invalid YAML in {manifest_file}: {e}")
+
+            # Apply each resource
+            for resource in resources:
+                if not resource:
+                    continue
+
+                # Inject namespace into resource metadata
+                if "metadata" not in resource:
+                    resource["metadata"] = {}
+                resource["metadata"]["namespace"] = namespace_name
+
+                # Apply resource based on kind
+                kind = resource.get("kind")
+                api_version = resource.get("apiVersion", "")
+
+                try:
+                    if kind == "Pod":
+                        self.core_v1.create_namespaced_pod(
+                            namespace=namespace_name, body=resource
+                        )
+                    elif kind == "Service":
+                        self.core_v1.create_namespaced_service(
+                            namespace=namespace_name, body=resource
+                        )
+                    elif kind == "ConfigMap":
+                        self.core_v1.create_namespaced_config_map(
+                            namespace=namespace_name, body=resource
+                        )
+                    elif kind == "Secret":
+                        self.core_v1.create_namespaced_secret(
+                            namespace=namespace_name, body=resource
+                        )
+                    elif kind == "PersistentVolumeClaim":
+                        self.core_v1.create_namespaced_persistent_volume_claim(
+                            namespace=namespace_name, body=resource
+                        )
+                    elif kind == "Deployment" and "apps/" in api_version:
+                        apps_v1 = client.AppsV1Api()
+                        apps_v1.create_namespaced_deployment(
+                            namespace=namespace_name, body=resource
+                        )
+                    elif kind == "StatefulSet" and "apps/" in api_version:
+                        apps_v1 = client.AppsV1Api()
+                        apps_v1.create_namespaced_stateful_set(
+                            namespace=namespace_name, body=resource
+                        )
+                    elif kind == "Job" and "batch/" in api_version:
+                        batch_v1 = client.BatchV1Api()
+                        batch_v1.create_namespaced_job(
+                            namespace=namespace_name, body=resource
+                        )
+                    else:
+                        logger.warning(
+                            f"Unsupported resource kind: {kind} (apiVersion: {api_version})"
+                        )
+                        continue
+
+                    logger.info(f"Applied {kind}: {resource.get('metadata', {}).get('name')}")
+
+                except ApiException as e:
+                    if e.status == 409:
+                        # Resource already exists - this is okay for idempotency
+                        logger.info(
+                            f"{kind} {resource.get('metadata', {}).get('name')} already exists"
+                        )
+                    else:
+                        logger.error(f"Failed to apply {kind}: {e}")
+                        raise
+
+        logger.info(f"Successfully applied all setup manifests to {namespace_name}")
