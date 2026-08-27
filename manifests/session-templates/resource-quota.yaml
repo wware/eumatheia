@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: session-quota
+  # namespace will be set programmatically to sess-{session_id}
+spec:
+  hard:
+    # CPU limits - 2 cores total for the namespace
+    requests.cpu: "2"
+    limits.cpu: "2"
+
+    # Memory limits - 4Gi total for the namespace
+    requests.memory: "4Gi"
+    limits.memory: "4Gi"
+
+    # Object count limits
+    pods: "10"  # Max 10 pods per session
+    services: "5"  # Max 5 services
+    configmaps: "10"  # Max 10 ConfigMaps
+    secrets: "10"  # Max 10 Secrets
+    persistentvolumeclaims: "2"  # Max 2 PVCs (if needed)
+
+    # Storage limits
+    requests.storage: "10Gi"  # Max 10Gi persistent storage

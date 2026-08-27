@@ -8,30 +8,34 @@
 
 ## Phase 1: Kubernetes Infrastructure Setup
 
-### 1.1 Cluster Setup
-- [ ] **DECISION: Use kind** (see Open Questions - RESOLVED)
+### 1.1 Cluster Setup ✅
+- [x] **DECISION: Use kind** (see Open Questions - RESOLVED)
 - [ ] Document kind installation steps for target VM (DigitalOcean/AWS)
-- [ ] Stand up kind cluster on development machine for testing
-- [ ] Verify cluster is accessible and healthy (`kubectl cluster-info`)
-- [ ] Add `kubernetes` Python package to `pyproject.toml` dependencies
-- [ ] Test basic Kubernetes Python client connectivity
+- [x] Stand up kind cluster on development machine for testing (using existing `kind-gitops-lab`)
+- [x] Verify cluster is accessible and healthy (`kubectl cluster-info`)
+- [x] Add `kubernetes` Python package to `pyproject.toml` dependencies
+- [x] Test basic Kubernetes Python client connectivity
 
-### 1.2 Namespace Template Design
-- [ ] Design `ResourceQuota` YAML template for per-session limits
-  - [ ] **DECISION: 2 CPU, 4Gi RAM** (start conservative, see Open Questions - RESOLVED)
-  - [ ] Set CPU limits: 2 cores max
-  - [ ] Set memory limits: 4Gi max
-  - [ ] Set storage limits if using PVCs
-- [ ] Design `LimitRange` YAML template for per-pod defaults
-  - [ ] Default CPU request/limit per container
-  - [ ] Default memory request/limit per container
-- [ ] Design `NetworkPolicy` YAML template for namespace isolation
-  - [ ] Default-deny cross-namespace traffic
-  - [ ] Allow egress to external services (or restrict if needed)
-- [ ] Design `ServiceAccount` + `Role` + `RoleBinding` template
-  - [ ] Scope to namespace-only kubectl access
-  - [ ] List allowed API verbs (get, list, create, delete pods/services)
-- [ ] Create template files in `manifests/session-templates/`
+### 1.2 Namespace Template Design ✅
+- [x] Design `ResourceQuota` YAML template for per-session limits
+  - [x] **DECISION: 2 CPU, 4Gi RAM** (start conservative, see Open Questions - RESOLVED)
+  - [x] Set CPU limits: 2 cores max
+  - [x] Set memory limits: 4Gi max
+  - [x] Set storage limits if using PVCs (10Gi max)
+- [x] Design `LimitRange` YAML template for per-pod defaults
+  - [x] Default CPU request/limit per container (100m request, 500m limit)
+  - [x] Default memory request/limit per container (256Mi request, 1Gi limit)
+- [x] Design `NetworkPolicy` YAML template for namespace isolation
+  - [x] Default-deny cross-namespace traffic
+  - [x] Allow egress to external services (HTTP/HTTPS)
+- [x] Design `ServiceAccount` + `Role` + `RoleBinding` template
+  - [x] Scope to namespace-only kubectl access
+  - [x] List allowed API verbs (get, list, create, delete pods/services)
+- [x] Create template files in `manifests/session-templates/`
+  - [x] `resource-quota.yaml`
+  - [x] `limit-range.yaml`
+  - [x] `network-policy.yaml`
+  - [x] `service-account.yaml` (includes Role and RoleBinding)
 
 ---
 

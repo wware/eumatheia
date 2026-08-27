@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: session-limits
+  # namespace will be set programmatically to sess-{session_id}
+spec:
+  limits:
+    # Default limits for containers
+    - type: Container
+      default:
+        # Default limits if not specified in pod spec
+        cpu: "500m"  # 0.5 CPU cores
+        memory: "1Gi"
+      defaultRequest:
+        # Default requests if not specified
+        cpu: "100m"  # 0.1 CPU cores
+        memory: "256Mi"
+      max:
+        # Maximum allowed per container
+        cpu: "1"  # 1 full CPU core
+        memory: "2Gi"
+      min:
+        # Minimum required
+        cpu: "10m"
+        memory: "10Mi"
+
+    # Limits for pods (aggregate of all containers)
+    - type: Pod
+      max:
+        cpu: "2"  # Max 2 CPUs per pod
+        memory: "4Gi"  # Max 4Gi per pod
