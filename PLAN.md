@@ -153,39 +153,42 @@
 
 ---
 
-## Phase 5: Per-Session Routing and Reverse Proxy
+## Phase 5: Per-Session Routing and Reverse Proxy ✅
 
-### 5.1 Update proxy endpoints
-- [ ] Replace hardcoded `host.docker.internal:7681` in `proxy_terminal()`
-  - [ ] Extract `session_id` from request (URL path or header)
-  - [ ] Construct in-cluster service URL: `http://terminal-{session_id}.sess-{session_id}.svc.cluster.local:7681/{path}`
-  - [ ] Update proxy target dynamically per session
-- [ ] Replace hardcoded `host.docker.internal:9000` in `proxy_app()`
-  - [ ] Similar pattern: extract session, route to session's app service
-  - [ ] Service name from exhibit config or convention (e.g., `app-{session_id}`)
-- [ ] Test proxying to multiple concurrent sessions
-- [ ] Handle missing/unavailable services gracefully (return 503)
+### 5.1 Update proxy endpoints ✅
+- [x] Replace hardcoded `host.docker.internal:7681` in `proxy_terminal()` (completed in Phase 4)
+  - [x] Extract `session_id` from cookie or X-Session-ID header
+  - [x] Construct in-cluster service URL: `http://terminal.sess-{session_id}.svc.cluster.local:7681/{path}`
+  - [x] Update proxy target dynamically per session
+- [x] Replace hardcoded `host.docker.internal:9000` in `proxy_app()`
+  - [x] Same pattern: extract session_id from cookie/header
+  - [x] Route to `http://app.sess-{session_id}.svc.cluster.local:9000/{path}`
+  - [x] Service name convention: 'app' for application services
+- [ ] Test proxying to multiple concurrent sessions (requires in-cluster deployment)
+- [x] Handle missing/unavailable services gracefully (returns 502 Bad Gateway)
 
-### 5.2 Session identification
-- [ ] **DECISION: Option B - Session cookie/header** (see Open Questions - RESOLVED)
-- [ ] Implement session cookie on session creation (`POST /api/sessions`)
-  - [ ] Set HttpOnly cookie with session_id
-  - [ ] Set appropriate expiry (match idle timeout)
-- [ ] Update proxy endpoints to extract session ID from cookie/header
-  - [ ] Read session ID from cookie or `X-Session-ID` header
-  - [ ] Fall back to query parameter for iframe compatibility if needed
-- [ ] Update frontend to send session ID with requests
-  - [ ] Cookie automatically sent by browser
-  - [ ] Alternative: add `X-Session-ID` header to API requests
-- [ ] Keep iframe URLs simple (no session ID in path)
-  - [ ] `TerminalPane`: use `/terminal/` as iframe src (cookie provides session)
-  - [ ] `IframePane`: use `/app/{path}` for apps (cookie provides session)
+### 5.2 Session identification ✅
+- [x] **DECISION: Option B - Session cookie/header** (see Open Questions - RESOLVED)
+- [x] Implement session cookie on session creation (`POST /api/sessions`)
+  - [x] Set HttpOnly cookie with session_id
+  - [x] 30 minute expiry matching idle timeout
+  - [x] SameSite=Lax for CSRF protection
+- [x] Update proxy endpoints to extract session ID from cookie/header
+  - [x] Reads session ID from cookie or `X-Session-ID` header
+  - [x] Validates session exists before proxying
+  - [x] Updates activity timestamp on every request
+- [x] Frontend automatically sends cookies with requests
+  - [x] Cookies sent by browser to all endpoints
+  - [x] Iframe requests include cookies from parent
+- [x] Keep iframe URLs simple (no session ID in path)
+  - [x] `TerminalPane`: uses `/terminal/` as iframe src
+  - [x] `IframePane`: uses `/app/{path}` for apps
 
 ### 5.3 Frontend updates
-- [ ] Update `TerminalPane.tsx` to construct session-specific terminal URL
-- [ ] Update `IframePane.tsx` to construct session-specific app URL
-- [ ] Test frontend with new routing
-- [ ] Rebuild frontend and Docker image
+- [x] TerminalPane already uses `/terminal/` endpoint
+- [x] IframePane already uses `/app/` endpoint
+- [ ] Test frontend with deployed orchestrator (requires Phase 6)
+- [ ] Rebuild frontend and Docker image (part of Phase 6)
 
 ---
 

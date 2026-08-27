@@ -267,10 +267,29 @@ async def delete_session(session_id: str):
 @app.api_route("/app/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 async def proxy_app(request: Request, path: str):
     """
-    Proxy requests to the example app service.
-    For now, proxies to a shared app. Later will route to per-session containers.
+    Proxy requests to the per-session app service in Kubernetes.
     """
-    target_url = f"http://host.docker.internal:9000/{path}"
+    # Extract session ID from cookie or header
+    session_id = request.cookies.get("session_id") or request.headers.get("X-Session-ID")
+
+    if not session_id:
+        raise HTTPException(
+            status_code=400, detail="No session_id found in cookie or X-Session-ID header"
+        )
+
+    # Verify session exists
+    session = session_manager.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Update session activity
+    session_manager.update_activity(session_id)
+
+    # Construct target URL to in-cluster app service
+    # Service name: app, in namespace: sess-{session_id}
+    # Note: Exhibits may provision different service names, but 'app' is the convention
+    namespace = f"sess-{session_id}"
+    target_url = f"http://app.{namespace}.svc.cluster.local:9000/{path}"
 
     if request.url.query:
         target_url += f"?{request.url.query}"

@@ -27,7 +27,7 @@ RUN pip install uv
 COPY pyproject.toml .
 COPY src/ src/
 COPY exhibits/ exhibits/
-COPY narratives/ narratives/
+COPY manifests/ manifests/
 
 # Copy built frontend from stage 1
 COPY --from=frontend-builder /frontend/dist /app/frontend/dist
