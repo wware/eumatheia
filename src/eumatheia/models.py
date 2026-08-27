@@ -118,6 +118,7 @@ class Session(BaseModel):
     session_id: str = Field(description="Unique session identifier (namespace name)")
     exhibit_id: str = Field(description="ID of the exhibit being followed")
     current_step: str = Field(description="ID of the current step")
+    created_at: float = Field(description="Unix timestamp when session was created")
     last_activity: float = Field(description="Unix timestamp of last activity")
 
     model_config = {"frozen": True}

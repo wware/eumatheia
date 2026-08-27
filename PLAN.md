@@ -221,23 +221,23 @@
 
 ---
 
-## Phase 7: Verification System
+## Phase 7: Verification System ✅ COMPLETE (Backend only)
 
-### 7.1 Shell verification execution
-- [ ] **DECISION: Use kubectl exec** (see Open Questions - RESOLVED)
-- [ ] Create new endpoint: `POST /api/sessions/{id}/verify`
-- [ ] For `verify.type == "shell"`:
-  - [ ] Use `kubectl exec` into terminal pod
-  - [ ] Run `verify.command` in pod
-  - [ ] Capture stdout/stderr
-  - [ ] Check if `verify.expect_contains` string is in output
-  - [ ] Return `{"passed": bool, "output": str}`
+### 7.1 Shell verification execution ✅
+- [x] **DECISION: Use kubectl exec** (see Open Questions - RESOLVED)
+- [x] Create new endpoint: `POST /api/sessions/{id}/verify`
+- [x] For `verify.type == "shell"`:
+  - [x] Use `kubectl exec` into terminal pod
+  - [x] Run `verify.command` in pod
+  - [x] Capture stdout/stderr
+  - [x] Check if `verify.expect_contains` string is in output
+  - [x] Return `{"passed": bool, "output": str}`
 - [ ] Monitor for state contamination issues
   - [ ] If learner's terminal state affects verification, add Job-based option later
-- [ ] For `verify.type == "manual"`:
-  - [ ] Return `{"passed": true}` (user-confirmed via Continue button)
+- [x] For `verify.type == "manual"`:
+  - [x] Return `{"passed": true}` (user-confirmed via Continue button)
 
-### 7.2 Frontend integration
+### 7.2 Frontend integration (DEFERRED)
 - [ ] Update `StepNav.tsx` to call verify endpoint when user clicks Next/Continue
 - [ ] Show verification status (pending, passed, failed)
 - [ ] Display verification output on failure
@@ -266,53 +266,53 @@
 
 ---
 
-## Phase 9: Session Persistence and Restore
+## Phase 9: Session Persistence and Restore ✅ COMPLETE (Backend only)
 
-### 9.1 SQLite-backed session store
-- [ ] Create SQLite database schema:
-  - [ ] Table: `sessions` (session_id, exhibit_id, current_step, created_at, last_activity)
-  - [ ] Table: `restore_tokens` (token, session_id, created_at, expires_at)
-- [ ] Update `SessionManager` to persist to SQLite instead of in-memory dict
-  - [ ] `create_session()` inserts to DB
-  - [ ] `get_session()` reads from DB
-  - [ ] `update_step()` updates DB
-  - [ ] `delete_session()` deletes from DB
-  - [ ] `reap_idle_sessions()` queries DB for expired sessions
-- [ ] Add database connection to `lifespan()` startup/shutdown
-- [ ] Test session persistence across orchestrator restarts
+### 9.1 SQLite-backed session store ✅
+- [x] Create SQLite database schema:
+  - [x] Table: `sessions` (session_id, exhibit_id, current_step, created_at, last_activity)
+  - [x] Table: `restore_tokens` (token, session_id, created_at, expires_at)
+- [x] Update `SessionManager` to persist to SQLite instead of in-memory dict
+  - [x] `create_session()` inserts to DB
+  - [x] `get_session()` reads from DB
+  - [x] `update_step()` updates DB
+  - [x] `delete_session()` deletes from DB
+  - [x] `reap_idle_sessions()` queries DB for expired sessions
+- [x] Add database connection to `lifespan()` startup/shutdown
+- [x] Test session persistence across orchestrator restarts
 
-### 9.2 Restore token system
-- [ ] Implement `POST /api/sessions/{id}/restore-token`
-  - [ ] Generate secure token (e.g., `secrets.token_urlsafe(32)`)
-  - [ ] Insert to `restore_tokens` table with expiry (e.g., 7 days)
-  - [ ] Return token to user
-- [ ] Implement `POST /api/restore?token={token}`
-  - [ ] Look up token in DB
-  - [ ] Check expiry
-  - [ ] Create new namespace for exhibit
-  - [ ] Apply setup manifests
-  - [ ] Set session to stored `current_step`
-  - [ ] Return new session ID
-- [ ] Add UI for generating restore link
-- [ ] Add UI messaging about restore behavior (fresh namespace, not state snapshot)
+### 9.2 Restore token system ✅
+- [x] Implement `POST /api/sessions/{id}/restore-token`
+  - [x] Generate secure token (e.g., `secrets.token_urlsafe(32)`)
+  - [x] Insert to `restore_tokens` table with expiry (e.g., 7 days)
+  - [x] Return token to user
+- [x] Implement `POST /api/restore?token={token}`
+  - [x] Look up token in DB
+  - [x] Check expiry
+  - [x] Create new namespace for exhibit
+  - [x] Apply setup manifests
+  - [x] Set session to stored `current_step`
+  - [x] Return new session ID
+- [ ] Add UI for generating restore link (DEFERRED - frontend work)
+- [ ] Add UI messaging about restore behavior (DEFERRED - frontend work)
 
 ---
 
-## Phase 10: Cleanup and Polish
+## Phase 10: Cleanup and Polish ✅ COMPLETE
 
-### 10.1 Remove dead code
-- [ ] Delete `static/index.html` (superseded by React frontend)
-- [ ] Delete `Dockerfile.ttyd`, `Dockerfile.ttyd-source` (superseded by gotty)
-- [ ] Delete old `container_manager.py` (replaced by `namespace_manager.py`)
-- [ ] Remove unused imports and commented-out code
-- [ ] Update `.gitignore` if needed
+### 10.1 Remove dead code ✅
+- [x] Delete `static/index.html` (superseded by React frontend) - never existed
+- [x] Delete `Dockerfile.ttyd`, `Dockerfile.ttyd-source`, `Dockerfile.gotty` (obsolete)
+- [x] Delete old `container_manager.py` (replaced by `namespace_manager.py`) - never existed
+- [x] Remove unused imports and commented-out code
+- [x] Update `.gitignore` if needed - already had .db files
 
-### 10.2 Naming consistency
-- [ ] Decide: `eumatheia` or `Edutopia`?
-- [ ] Update FastAPI app title in `main.py`
-- [ ] Update `pyproject.toml` description
-- [ ] Update all documentation
-- [ ] Update frontend title/branding
+### 10.2 Naming consistency ✅
+- [x] Decide: `eumatheia` or `Edutopia`? → **eumatheia**
+- [x] Update FastAPI app title in `main.py`
+- [x] Update `pyproject.toml` description - already correct
+- [x] Update all documentation
+- [x] Update frontend title/branding
 
 ### 10.3 Documentation
 - [ ] Update README.md with current architecture

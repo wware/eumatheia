@@ -190,7 +190,7 @@ function App() {
     return (
       <div className="app">
         <header>
-          <h1>Edutopia</h1>
+          <h1>Eumatheia</h1>
         </header>
         <main style={{ textAlign: 'center', padding: '4rem' }}>
           <p className="status">Loading step...</p>

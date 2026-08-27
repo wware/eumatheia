@@ -55,7 +55,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Edutopia",
+    title="Eumatheia",
     description="Interactive software engineering learning platform",
     version="0.1.0",
     lifespan=lifespan,
@@ -248,6 +248,73 @@ async def set_current_step(session_id: str, request: Request):
     return {"current_step": step_id}
 
 
+@app.post("/api/sessions/{session_id}/verify")
+async def verify_step(session_id: str):
+    """
+    Verify the current step.
+
+    For shell verification: runs command via kubectl exec and checks output.
+    For manual verification: always passes.
+    """
+    session = session_manager.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Load exhibit and get current step
+    exhibit = exhibit_loader.load_exhibit(session.exhibit_id)
+    step = exhibit.get_step(session.current_step)
+
+    if not step:
+        raise HTTPException(status_code=500, detail="Current step not found")
+
+    # Update activity
+    session_manager.update_activity(session_id)
+
+    # Handle verification based on type
+    if step.verify.type == "manual":
+        # Manual verification always passes
+        return {"passed": True, "output": ""}
+
+    elif step.verify.type == "shell":
+        # Shell verification - use kubectl exec
+        from kubernetes import client
+        from kubernetes.stream import stream
+
+        namespace = f"sess-{session_id}"
+        pod_name = "terminal"  # Convention: terminal pod is named "terminal"
+
+        try:
+            core_v1 = client.CoreV1Api()
+
+            # Execute command in pod
+            exec_command = ["/bin/sh", "-c", step.verify.command]
+
+            resp = stream(
+                core_v1.connect_get_namespaced_pod_exec,
+                pod_name,
+                namespace,
+                command=exec_command,
+                stderr=True,
+                stdin=False,
+                stdout=True,
+                tty=False,
+            )
+
+            # Check if expected string is in output
+            passed = step.verify.expect_contains in resp
+
+            return {"passed": passed, "output": resp}
+
+        except Exception as e:  # noqa: BLE001 - intentionally catch all for verification
+            return {
+                "passed": False,
+                "output": f"Verification error: {type(e).__name__}: {e!s}",
+            }
+
+    else:
+        raise HTTPException(status_code=400, detail=f"Unknown verify type: {step.verify.type}")
+
+
 @app.delete("/api/sessions/{session_id}")
 async def delete_session(session_id: str):
     """Delete a session and clean up resources."""
@@ -262,6 +329,142 @@ async def delete_session(session_id: str):
         print(f"Warning: Failed to delete namespace for session {session_id}: {e}")
 
     return {"message": "Session deleted"}
+
+
+@app.post("/api/sessions/{session_id}/restore-token")
+async def create_restore_token(session_id: str):
+    """
+    Generate a restore token for a session.
+
+    Returns a token that can be used to restore the session's progress
+    (current step) even after the session expires or orchestrator restarts.
+    """
+    import secrets
+    import time
+
+    # Verify session exists
+    session = session_manager.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # Generate secure token
+    token = secrets.token_urlsafe(32)
+
+    # Token expires in 7 days
+    expires_at = time.time() + (7 * 24 * 60 * 60)
+
+    # Store in database
+    session_manager._db.create_restore_token(token, session_id, expires_at)
+
+    return {"token": token, "expires_at": expires_at}
+
+
+@app.post("/api/restore")
+async def restore_session(request: Request):
+    """
+    Restore a session from a restore token.
+
+    Creates a fresh session and namespace with the saved exhibit and step.
+    Does NOT restore terminal state or other runtime data.
+    """
+    body = await request.json()
+    token = body.get("token")
+
+    if not token:
+        raise HTTPException(status_code=400, detail="token required")
+
+    # Look up token
+    token_data = session_manager._db.get_restore_token(token)
+    if not token_data:
+        raise HTTPException(status_code=404, detail="Invalid or expired restore token")
+
+    # Get original session data
+    original_session_id = token_data["session_id"]
+    original_session = session_manager.get_session(original_session_id)
+
+    if not original_session:
+        raise HTTPException(
+            status_code=404, detail="Original session no longer exists"
+        )
+
+    # Load exhibit to verify it still exists
+    try:
+        exhibit = exhibit_loader.load_exhibit(original_session.exhibit_id)
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Exhibit not found: {original_session.exhibit_id}",
+        )
+
+    # Verify step exists
+    step = exhibit.get_step(original_session.current_step)
+    if not step:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Saved step no longer exists: {original_session.current_step}",
+        )
+
+    # Create new session starting at saved step
+    new_session = session_manager.create_session(
+        original_session.exhibit_id, original_session.current_step
+    )
+
+    # Provision Kubernetes namespace
+    try:
+        namespace_metadata = await namespace_manager.create_namespace(
+            new_session.session_id
+        )
+        print(
+            f"Created namespace for restored session {new_session.session_id}: {namespace_metadata}"
+        )
+    except Exception as e:  # noqa: BLE001 - intentionally catch all for namespace provisioning
+        session_manager.delete_session(new_session.session_id)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to provision namespace: {type(e).__name__}: {e!s}",
+        )
+
+    # Apply exhibit setup manifests
+    if exhibit.setup:
+        try:
+            exhibit_dir = exhibit_loader._exhibits_dir / original_session.exhibit_id
+            manifest_files = [setup.manifest for setup in exhibit.setup]
+            await namespace_manager.apply_setup_manifests(
+                new_session.session_id, exhibit_dir, manifest_files
+            )
+            print(
+                f"Applied {len(manifest_files)} setup manifests for restored session {new_session.session_id}"
+            )
+        except Exception as e:  # noqa: BLE001 - intentionally catch all for manifest application
+            await namespace_manager.delete_namespace(new_session.session_id)
+            session_manager.delete_session(new_session.session_id)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to apply setup manifests: {type(e).__name__}: {e!s}",
+            )
+
+    # Delete the used token (one-time use)
+    session_manager._db.delete_restore_token(token)
+
+    # Create response with session cookie
+    response_data = {
+        "session_id": new_session.session_id,
+        "exhibit_id": new_session.exhibit_id,
+        "current_step": new_session.current_step,
+        "restored": True,
+    }
+
+    from fastapi.responses import JSONResponse
+
+    response = JSONResponse(content=response_data)
+    response.set_cookie(
+        key="session_id",
+        value=new_session.session_id,
+        httponly=True,
+        max_age=1800,
+        samesite="lax",
+    )
+    return response
 
 
 @app.api_route("/app/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])

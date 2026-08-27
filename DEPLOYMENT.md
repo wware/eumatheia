@@ -1,8 +1,13 @@
 # Eumatheia Deployment Guide
 
-## Current Status: Phases 1-5 Complete ✅
+## Current Status: Phases 1-5, 7 (backend), 9, 10 Complete ✅
 
-The orchestrator is successfully deployed and running in a Kubernetes cluster with full end-to-end functionality.
+The orchestrator is successfully deployed and running in a Kubernetes cluster with:
+- Full session lifecycle management
+- SQLite-backed persistence (sessions survive orchestrator restarts)
+- Shell and manual verification endpoints
+- Session restore tokens (7-day expiry)
+- Namespace isolation and resource management
 
 ## Architecture
 
@@ -134,22 +139,31 @@ uv run python test_phase4.py
 
 ## Known Issues / TODO
 
-1. **Session persistence**: Sessions are in-memory, lost on orchestrator restart (Phase 9)
-2. **Terminal activity tracking**: Currently tracks proxy requests, not actual keystrokes
-3. **Production deployment**: Need Ingress, TLS, proper DNS (Phase 11)
-4. **Monitoring**: No metrics or alerting yet (Phase 11)
-5. **NodePort limitation**: For kind access, production needs LoadBalancer/Ingress
+1. **Frontend features**: Verification UI, restore token UI, non-linear navigation (Phases 7.2, 8, 9.2)
+2. **Ancillary files**: Docker image building from compose/Dockerfiles (Phase 6)
+3. **Terminal activity tracking**: Currently tracks proxy requests, not actual keystrokes
+4. **Production deployment**: Need Ingress, TLS, proper DNS (Phase 11)
+5. **Monitoring**: No metrics or alerting yet (Phase 11)
+6. **NodePort limitation**: For kind access, production needs LoadBalancer/Ingress
+7. **Database persistence**: SQLite DB is ephemeral in pod, needs PersistentVolume for production
 
 ## Bug Fixes Applied
 
 1. **Double sess- prefix**: Fixed session_manager to generate IDs without prefix
 2. **RBAC permissions**: Added serviceaccounts to ClusterRole resources
+3. **Naming consistency**: Unified on "Eumatheia" (was mixed with "Edutopia")
 
-## Next Steps (Phase 6+)
+## Completed Phases
 
-- Phase 6: Ancillary Files Integration (Docker image building)
-- Phase 7: Verification System (kubectl exec for shell verification)
-- Phase 8: Non-Linear Navigation (nav buttons in frontend)
-- Phase 9: Session Persistence (SQLite for session state)
-- Phase 10: Additional exhibits
-- Phase 11: Production deployment
+- **Phase 1-5**: Orchestrator deployment, session management, namespace provisioning ✅
+- **Phase 7 (backend)**: Shell verification endpoint with kubectl exec ✅
+- **Phase 9**: SQLite session persistence and restore tokens ✅
+- **Phase 10**: Cleanup and naming consistency ✅
+
+## Next Steps (Phase 6, 8, Frontend work)
+
+- Phase 6: Ancillary Files Integration (Docker image building from compose/Dockerfiles)
+- Phase 7.2: Frontend verification UI (call verify endpoint, show results)
+- Phase 8: Non-Linear Navigation (nav buttons support in frontend)
+- Phase 9.2: Frontend restore UI (generate/display restore links)
+- Phase 11: Production deployment (PersistentVolume, Ingress, TLS, monitoring)
